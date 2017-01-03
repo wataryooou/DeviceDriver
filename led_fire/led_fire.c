@@ -7,81 +7,131 @@
 #include <linux/kthread.h>
 #include <linux/sched.h>
 #include <linux/jiffies.h>
-
+#include <linux/kernel.h> 
 MODULE_AUTHOR("Ryou Watanabe");
-MODULE_DESCRIPTION("driver for LED control");
+MODULE_DESCRIPTION("driver for LED control and timer");
 MODULE_LICENSE("GPL");
 MODULE_VERSION("0.1");
 
-double sec = 1.0;
-int flag=0;
+bool threadFlag = true;
+char unitCheck = 's';
+bool flag = true;
 static dev_t dev;
 static struct cdev cdv;
 static struct class *cls = NULL;
 static volatile u32 *gpio_base = NULL;
 
 static struct task_struct *kthread_tsk;
-static void my_kthread_main(void)
+static void kthread_main(void)
 {
        set_current_state(TASK_INTERRUPTIBLE);
-       //schedule_timeout(0.1*HZ);
-	   if(flag == 0){
+	   if(flag == true){
+     	   printk("kthread:%ld\n", jiffies);
            schedule_timeout(0.1*HZ);
-		   flag = 1;
+		   flag = false;
            gpio_base[10] = 1 << 25;      
-	   }else if(flag == 1){
-       	   schedule_timeout(1.0*HZ);
-		   flag = 0;
+	   }else if(flag == false){
+       	   schedule_timeout(0.9*HZ);
+		   flag = true;
            gpio_base[7] = 1 << 25;      
 	   }
-	   printk("kthread:%ld\n", jiffies);
 }
-static int my_kthread(void *arg)
+
+static void kthread_count(void)
+{
+   set_current_state(TASK_INTERRUPTIBLE);
+   schedule_timeout(1*HZ);
+   printk("kthread:%ld\n", jiffies);
+}
+
+static int mkthread(void *arg)
 {
        printk("HZ:%d\n", HZ);
        while (!kthread_should_stop()) {
-            my_kthread_main();
-        }
+            if(threadFlag == true){
+				kthread_main();
+			}else{
+			kthread_count();
+			}
+	   }
        return 0;
 }
-/*
-static ssize_t led_write(struct file* filp, const char* buf, size_t count, loff_t* pos)
-{
-	        printk(KERN_INFO "led_write is called\n");
-			return 1;
-}
-*/
 
+static void led_alarm(void)
+{
+	int i;
+	for(i=0;i<20;i++){
+		gpio_base[10] = 1 << 25;
+        set_current_state(TASK_INTERRUPTIBLE);
+       	schedule_timeout(0.1*HZ);
+		gpio_base[7] = 1 << 25;
+        set_current_state(TASK_INTERRUPTIBLE);
+       	schedule_timeout(0.1*HZ);
+	}
+}
+
+static void timer_start(int sec)
+{
+    set_current_state(TASK_INTERRUPTIBLE);
+   	schedule_timeout(sec*HZ);
+}
 
 static ssize_t led_write(struct file* filp, const char* buf, size_t count, loff_t* pos)
 {
 	int i;
 	char c;
+	int sec = 0;
     if(copy_from_user(&c,buf,sizeof(char)))
 	    return -EFAULT;
-	
+		
+	if(c >= '0' && c<= '9'){
+		if(c == '0'){
 
-	if(c == '0'){
-		gpio_base[10] = 1 << 25;
-		printk(KERN_INFO "\e[31mLED OFF\e[m\n");
-//		sec = 2;
-	}else if(c == '1'){
-		gpio_base[7] = 1 << 25;
-		printk(KERN_INFO "\e[31mLED ON\e[m\n");
-//		sec = 1;
-	}else if(c == 'w'){
-		for(i=0;i<5;i++){
-		    printk(KERN_INFO "%d\n",i);
-            set_current_state(TASK_INTERRUPTIBLE);
-       	    schedule_timeout(i*HZ);
+		}else if(c == '1'){
+			sec = 1;
+		}else if(c == '2'){
+			sec = 2;
+		}else if(c == '3'){
+			sec = 3;
+		}else if(c == '4'){
+			sec = 4;
+		}else if(c == '5'){
+			sec = 5;
+		}else if(c == '6'){
+			sec = 6;
+		}else if(c == '7'){
+			sec = 7;
+		}else if(c == '8'){
+			sec = 8;
+		}else if(c == '9'){
+			sec = 9;
+		}	
+
+		threadFlag = false;
+
+		if(unitCheck == 'm'){
+			printk(KERN_INFO "\e[31m%dmin start\e[m\n",sec);
+			sec = sec*60;
+		}else if(unitCheck == 's'){
+     		printk(KERN_INFO "\e[31m%dsec start\e[m\n",sec);	
 		}
-	}/*else if(c == 'l'){
-		for(i=0;i<100;){
-            set_current_state(TASK_INTERRUPTIBLE);
-       	    schedule_timeout(i*HZ);
-			i=i+0.1;
+
+		timer_start(sec);
+		
+		if(unitCheck == 'm'){
+			sec = sec/60;
+			printk(KERN_INFO "\e[31m%dmin end\e[m\n",sec);
+		}else if(unitCheck == 's'){
+     		printk(KERN_INFO "\e[31m%dsec end\e[m\n",sec);	
 		}
-	}*/
+
+		led_alarm();
+
+		threadFlag = true;
+	}
+	if(c == 'm' || c == 's'){
+		unitCheck = c;
+	}
 	printk(KERN_INFO "receive \e[31m%c\e[m\n",c);
 	return 1;
 }
@@ -99,14 +149,11 @@ static ssize_t sushi_read(struct file* filp, char* buf, size_t count, loff_t* po
 	return size;
 }
 
-
 static struct file_operations led_fops = {
 	        .owner = THIS_MODULE,
 	        .write = led_write,
 			.read = sushi_read
 };
-
-
 
 static int __init init_mod(void)
 {
@@ -132,7 +179,7 @@ static int __init init_mod(void)
 		printk(KERN_ERR "cdev_add failed. major:%d, minor:%d",MAJOR(dev),MINOR(dev));
         return retval;
 	}
-    kthread_tsk = kthread_run(my_kthread, NULL, "param %s&%d", "test", 123);
+    kthread_tsk = kthread_run(mkthread, NULL, "param %s&%d", "test", 123);
     if (IS_ERR(kthread_tsk))
         return -1;
     printk("pid->%d:prio->%d:comm->%s\n",
