@@ -1,1 +1,0 @@
-cmd_/home/pi/github/DeviceDriver/led_fire/led_fire.ko := ld -EL -r  -T ./scripts/module-common.lds --build-id  -o /home/pi/github/DeviceDriver/led_fire/led_fire.ko /home/pi/github/DeviceDriver/led_fire/led_fire.o /home/pi/github/DeviceDriver/led_fire/led_fire.mod.o
