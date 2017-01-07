@@ -40,7 +40,7 @@ $ sudo chmod 666 /dev/ledtimer
 `$ echo 3 > /dev/ledtimer`
 
 ## Licence
-[MIT](https://github.com/Ryou-Watanabe/DeviceDriver/blob/master/LICENSE)
+[Licence](https://github.com/Ryou-Watanabe/DeviceDriver/blob/master/LICENSE)
 
 ## Author
 [Ryou Watanabe](https://github.com/Ryou-Watanabe)
