@@ -1,13 +1,28 @@
+/*************************************************************
+  led_fire.c
+  Copyright (C) 2017  Ryou Watanabe
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*************************************************************/
+
 #include <linux/module.h>
 #include <linux/fs.h>
 #include <linux/cdev.h>
-#include <linux/device.h> 
+#include <linux/device.h>
 #include <asm/uaccess.h>
 #include <linux/io.h>
 #include <linux/kthread.h>
 #include <linux/sched.h>
 #include <linux/jiffies.h>
-#include <linux/kernel.h> 
+#include <linux/kernel.h>
 MODULE_AUTHOR("Ryou Watanabe");
 MODULE_DESCRIPTION("driver for LED control and timer");
 MODULE_LICENSE("GPL");
@@ -24,17 +39,17 @@ static volatile u32 *gpio_base = NULL;
 static struct task_struct *kthread_tsk;
 static void kthread_main(void)
 {
-       set_current_state(TASK_INTERRUPTIBLE);
-	   if(flag == true){
-     	   printk("kthread:%ld\n", jiffies);
-           schedule_timeout(0.1*HZ);
-		   flag = false;
-           gpio_base[10] = 1 << 25;      
-	   }else if(flag == false){
-       	   schedule_timeout(0.9*HZ);
-		   flag = true;
-           gpio_base[7] = 1 << 25;      
-	   }
+    set_current_state(TASK_INTERRUPTIBLE);
+    if(flag == true){
+      printk("kthread:%ld\n", jiffies);
+      schedule_timeout(0.1*HZ);
+      flag = false;
+      gpio_base[10] = 1 << 25;
+	  }else if(flag == false){
+      schedule_timeout(0.9*HZ);
+		  flag = true;
+      gpio_base[7] = 1 << 25;
+	  }
 }
 
 static void kthread_count(void)
@@ -48,13 +63,13 @@ static int mkthread(void *arg)
 {
        printk("HZ:%d\n", HZ);
        while (!kthread_should_stop()) {
-            if(threadFlag == true){
-				kthread_main();
-			}else{
-			kthread_count();
-			}
-	   }
-       return 0;
+         if(threadFlag == true){
+				    kthread_main();
+			   }else{
+			      kthread_count();
+			   }
+	     }
+    return 0;
 }
 
 static void led_alarm(void)
@@ -62,11 +77,11 @@ static void led_alarm(void)
 	int i;
 	for(i=0;i<20;i++){
 		gpio_base[10] = 1 << 25;
-        set_current_state(TASK_INTERRUPTIBLE);
-       	schedule_timeout(0.1*HZ);
+    set_current_state(TASK_INTERRUPTIBLE);
+   	schedule_timeout(0.1*HZ);
 		gpio_base[7] = 1 << 25;
-        set_current_state(TASK_INTERRUPTIBLE);
-       	schedule_timeout(0.1*HZ);
+    set_current_state(TASK_INTERRUPTIBLE);
+    schedule_timeout(0.1*HZ);
 	}
 }
 
@@ -81,9 +96,9 @@ static ssize_t led_write(struct file* filp, const char* buf, size_t count, loff_
 	int i;
 	char c;
 	int sec = 0;
-    if(copy_from_user(&c,buf,sizeof(char)))
-	    return -EFAULT;
-		
+  if(copy_from_user(&c,buf,sizeof(char)))
+    return -EFAULT;
+
 	if(c >= '0' && c<= '9'){
 		if(c == '0'){
 
@@ -105,7 +120,7 @@ static ssize_t led_write(struct file* filp, const char* buf, size_t count, loff_
 			sec = 8;
 		}else if(c == '9'){
 			sec = 9;
-		}	
+		}
 
 		threadFlag = false;
 
@@ -113,16 +128,16 @@ static ssize_t led_write(struct file* filp, const char* buf, size_t count, loff_
 			printk(KERN_INFO "\e[31m%dmin start\e[m\n",sec);
 			sec = sec*60;
 		}else if(unitCheck == 's'){
-     		printk(KERN_INFO "\e[31m%dsec start\e[m\n",sec);	
+     		printk(KERN_INFO "\e[31m%dsec start\e[m\n",sec);
 		}
 
 		timer_start(sec);
-		
+
 		if(unitCheck == 'm'){
 			sec = sec/60;
 			printk(KERN_INFO "\e[31m%dmin end\e[m\n",sec);
 		}else if(unitCheck == 's'){
-     		printk(KERN_INFO "\e[31m%dsec end\e[m\n",sec);	
+     		printk(KERN_INFO "\e[31m%dsec end\e[m\n",sec);
 		}
 
 		led_alarm();
