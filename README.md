@@ -1,6 +1,6 @@
 # DeviceDriver
 ## OverView
-[led_fire/](https://github.com/wataryooou/DeviceDriver/tree/master/led_fire) - 名前は燃えているが燃えないのでご安心を。1秒ごとにLEDが点灯する。また、1~9(秒/分)を計測することができる。指定された時間が経つとLEDが点灯によって通知する。カップラーメン計測用として作成した。個人的には重宝する(?)。
+[led_fire/](https://github.com/wataryooou/DeviceDriver/tree/master/led_fire) - 1秒ごとにLEDが点灯する。また、1~9(秒/分)を計測することができる。指定された時間が経つとLEDが点灯によって通知する。
 
 ## Demo
 [Youtube](https://youtu.be/E_c5L9rQi_g)
