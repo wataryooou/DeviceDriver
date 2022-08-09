@@ -43,4 +43,4 @@ $ sudo chmod 666 /dev/ledtimer
 [Licence](https://github.com/wataryooou/DeviceDriver/blob/master/LICENSE)
 
 ## Author
-[Ryo Watanabe](https://github.com/wataryooou)
+[wataryooou](https://github.com/wataryooou)
